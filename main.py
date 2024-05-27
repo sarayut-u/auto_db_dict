@@ -18,8 +18,31 @@ queries = {
     # "foreign_keys": "SELECT tc.table_schema, tc.table_name, kcu.column_name, ccu.table_schema AS foreign_table_schema, ccu.table_name AS foreign_table_name, ccu.column_name AS foreign_column_name FROM information_schema.table_constraints AS tc JOIN information_schema.key_column_usage AS kcu ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema JOIN information_schema.constraint_column_usage AS ccu ON ccu.constraint_name = tc.constraint_name WHERE tc.constraint_type = 'FOREIGN KEY' ORDER BY tc.table_schema, tc.table_name, kcu.ordinal_position;",
     # "indexes": "SELECT schemaname as table_schema, tablename as table_name, indexname as index_name, indexdef as index_definition FROM pg_indexes WHERE schemaname NOT IN ('pg_catalog', 'information_schema') ORDER BY schemaname, tablename, indexname;",
     "cronjobs": "SELECT jobid, schedule, command, nodename, nodeport, database, username FROM cron.job;",
-    "triggers": "SELECT n.nspname AS schema_name, c.relname AS table_name, t.tgname AS trigger_name, pg_catalog.pg_get_triggerdef(t.oid) AS trigger_definition FROM pg_catalog.pg_trigger t JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE NOT t.tgisinternal AND n.nspname <> 'pg_catalog' AND n.nspname <> 'information_schema' ORDER BY schema_name, table_name, trigger_name;",
-    "functions": "SELECT n.nspname AS schema_name, p.proname AS function_name, pg_catalog.pg_get_functiondef(p.oid) AS function_definition FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace WHERE pg_catalog.pg_function_is_visible(p.oid) AND n.nspname <> 'pg_catalog' AND n.nspname <> 'information_schema' ORDER BY schema_name, function_name;"
+    "triggers": """SELECT n.nspname AS schema_name, 
+                        c.relname AS table_name, 
+                        t.tgname AS trigger_name, 
+                        pg_catalog.pg_get_triggerdef(t.oid) AS trigger_definition 
+                    FROM pg_catalog.pg_trigger t 
+                        JOIN pg_catalog.pg_class c ON c.oid = t.tgrelid 
+                        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace 
+                    WHERE NOT t.tgisinternal AND n.nspname <> 'pg_catalog' 
+                        AND n.nspname <> 'information_schema' 
+                    ORDER BY schema_name, table_name, trigger_name;""",
+    "functions": """SELECT n.nspname AS function_schema,
+                        p.proname AS function_name,
+                        l.lanname AS function_language,
+                        case when l.lanname = 'internal' then p.prosrc
+                                else pg_get_functiondef(p.oid)
+                                end AS definition,
+                        pg_get_function_arguments(p.oid) AS function_arguments,
+                        t.typname AS return_type
+                    FROM pg_proc p
+                        LEFT JOIN pg_namespace n on p.pronamespace = n.oid
+                        LEFT JOIN pg_language l on p.prolang = l.oid
+                        LEFT JOIN pg_type t on t.oid = p.prorettype 
+                    WHERE n.nspname not in ('pg_catalog', 'information_schema')
+                    ORDER BY function_schema,
+                                function_name;"""
 }
 
 # Export data to CSV files
